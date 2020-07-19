@@ -31,8 +31,8 @@ class CriticLoader(Dataset):
         if type(y) is tuple:
             y = list(y)
 
-        x = torch.Tensor(x).to(self.device)
-        y = torch.Tensor(y).to(self.device)
+        x = torch.Tensor(x).to(self.device).float()
+        y = torch.Tensor(y).to(self.device).float()
 
         return x, y
 
@@ -88,8 +88,9 @@ class ActorLoader(Dataset):
         if type(action) is tuple:
             action = list(action)
 
-        state = torch.Tensor(state).to(self.device)
-        action = torch.Tensor(action).to(self.device)
+        state = torch.Tensor(state).to(self.device).float()
+        action = torch.Tensor(action).to(self.device).float()
+        value = torch.Tensor(value).to(self.device).float()
 
         # state = Tensor[]
         # action = Tensor[]

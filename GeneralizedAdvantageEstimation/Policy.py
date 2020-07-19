@@ -16,8 +16,8 @@ class Policy:
         state_size = np.prod(list(env.observation_space.shape))
         action_size = np.prod(list(env.action_space.shape))
 
-        self.actor = Actor(n_ip=state_size, n_op=action_size).apply(self.weights_init)
-        self.critic = Critic(n_ip=state_size).apply(self.weights_init)
+        self.actor = Actor(n_ip=state_size, n_op=action_size)#.apply(self.weights_init)
+        self.critic = Critic(n_ip=state_size)#.apply(self.weights_init)
 
         if torch.cuda.is_available():
             self.use_gpu = True
@@ -69,10 +69,10 @@ class Policy:
         return sampled_action
 
     def get_log_prob(self, mean, standard_deviation, actions):
-        # TODO: Adjust return value
+
         m = mean
         s = standard_deviation
-        log_prob = torch.distributions.Normal(loc=m, scale=s).log_prob(actions).sum(-1)
+        log_prob = torch.distributions.Normal(loc=m, scale=s).log_prob(actions)
         return log_prob
 
     def improve_actor(self, data_loader, lr=0.001, batch_size=128, iterations=1):
@@ -84,7 +84,10 @@ class Policy:
             for states, actions, values in loader:
                 optimizer.zero_grad()
                 m, s = self.actor(states)
-                # TODO: Complete This
+                lp = self.get_log_prob(mean=m, standard_deviation=s, actions=actions)
+                loss = -(lp*values).sum()
+                loss.backward()
+                optimizer.step()
 
 
     def save_policy(self):
@@ -98,3 +101,19 @@ class Policy:
     def demonstrate(self):
         # TODO : Fill demonstrate
         pass
+
+
+if __name__ == '__main__':
+    p = Policy()
+    m = [100, 200, 300]
+    s = [1, 1, 1]
+    a = [100, 200, 300]
+    v = [1000, 100, 10]
+    m = torch.tensor(m).float()
+    s = torch.tensor(s).float()
+    a = torch.tensor(a).float()
+    v = torch.tensor(v).float()
+    lp = p.get_log_prob(mean=m, standard_deviation=s, actions=a)
+    print(lp)
+    nlp = -(lp*v)#.sum()
+    print(nlp)
