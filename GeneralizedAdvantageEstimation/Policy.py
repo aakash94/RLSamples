@@ -7,17 +7,19 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from VisdomPlotter import VisdomPlotter
 
 
 class Policy:
 
     def __init__(self, env_id="LunarLanderContinuous-v2"):
+        self.envid = env_id
         env = gym.make(env_id)
         state_size = np.prod(list(env.observation_space.shape))
         action_size = np.prod(list(env.action_space.shape))
 
-        self.actor = Actor(n_ip=state_size, n_op=action_size)#.apply(self.weights_init)
-        self.critic = Critic(n_ip=state_size)#.apply(self.weights_init)
+        self.actor = Actor(n_ip=state_size, n_op=action_size)  # .apply(self.weights_init)
+        self.critic = Critic(n_ip=state_size)  # .apply(self.weights_init)
 
         if torch.cuda.is_available():
             self.use_gpu = True
@@ -40,7 +42,6 @@ class Policy:
             sum_loss = 0.0
             count = 0
             for x, y in loader:
-
                 # if self.use_gpu:
                 #     x = x.float().cuda()
                 #     y = y.float().cuda()
@@ -56,6 +57,7 @@ class Policy:
             total_loss += (sum_loss / count)
 
         average_loss = total_loss / iterations
+        return average_loss
 
     def sample_action(self, observations):
         # observations = [ [], [], [], [] ]
@@ -79,28 +81,34 @@ class Policy:
         optimizer = optim.Adam(self.actor.parameters(), lr=lr)
         loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=True)
         for e in range(iterations):
-            sum_loss = 0.0
-            count = 0
             for states, actions, values in loader:
                 optimizer.zero_grad()
                 m, s = self.actor(states)
                 lp = self.get_log_prob(mean=m, standard_deviation=s, actions=actions)
-                loss = -(lp*values).sum()
+                loss = -(lp * values).sum()
                 loss.backward()
                 optimizer.step()
 
+    def save_policy(self, save_name):
+        self.actor.save_model(save_name=save_name)
+        self.critic.save_model(save_name=save_name)
 
-    def save_policy(self):
-        # TODO : Fill save_policy
-        pass
+    def load_policy(self, load_name):
+        self.actor.load_model(load_name=load_name)
+        self.critic.load_model(load_name=load_name)
 
-    def load_policy(self):
-        # TODO : Fill load_policy
-        pass
-
-    def demonstrate(self):
-        # TODO : Fill demonstrate
-        pass
+    def demonstrate(self, ep_count=1):
+        env = gym.make(self.envid)
+        with torch.no_grad():
+            for e in range(ep_count):
+                done = False
+                ob = env.reset()
+                while not done:
+                    observation = ob[None]
+                    action = self.sample_action(observations=observation)
+                    action = action[0]
+                    ob_, r, done, _ = env.step(action)
+                    env.render()
 
 
 if __name__ == '__main__':
@@ -115,5 +123,5 @@ if __name__ == '__main__':
     v = torch.tensor(v).float()
     lp = p.get_log_prob(mean=m, standard_deviation=s, actions=a)
     print(lp)
-    nlp = -(lp*v)#.sum()
+    nlp = -(lp * v)  # .sum()
     print(nlp)

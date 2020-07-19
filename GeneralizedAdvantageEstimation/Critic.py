@@ -47,9 +47,9 @@ class Critic(nn.Module):
         torch.save(self.state_dict(), save_path)
         self.to_device()
 
-    def load_model(self, save_name):
+    def load_model(self, load_name):
         self.to_cpu()
-        save_path = "saves/" + save_name + ".chkpt"
+        save_path = "saves/" + load_name + ".chkpt"
         self.load_state_dict(torch.load(save_path))
         self.to_device()
 

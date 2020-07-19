@@ -5,6 +5,7 @@ from Runs import Runs
 from Policy import Policy
 from Loader import CriticLoader
 from Loader import ActorLoader
+from VisdomPlotter import VisdomPlotter
 import gym
 import torch
 import numpy as np
@@ -17,6 +18,8 @@ class Looper:
         self.env = gym.make(env)
         self.runs = Runs()
 
+        self.plotter = VisdomPlotter(env_name=env)
+
         self.device_cpu = torch.device("cpu")
         if torch.cuda.is_available():
             self.use_gpu = True
@@ -25,22 +28,23 @@ class Looper:
             self.use_gpu = False
             self.device = torch.device("cpu")
 
-    def loop(self, epochs):
+    def loop(self, epochs, show_every=100):
 
-        render = False
         for e in trange(epochs):
-            if e % 10 == 0:
-                render = True
-            else:
-                render = False
 
-            self.generate_samples(render=render)
-            self.estimate_return()
+            if e % show_every == 0:
+                self.policy.demonstrate(ep_count=10)
+
+            reward = self.generate_samples()
+            self.plotter.plot_line('reward per episode', 'reward', 'avg reward when generating samples', e, reward)
+            loss = self.estimate_return()
+            self.plotter.plot_line('loss for critic fit', 'loss', 'avg loss per batch', e, loss)
             self.improve_policy()
 
     def generate_samples(self, num_ep=1, render=False):
         # Add stuff to trajectories
         self.runs.reset()
+        reward = 0
 
         with torch.no_grad():
             for e in range(num_ep):
@@ -52,15 +56,19 @@ class Looper:
                     action = self.policy.sample_action(observations=observation)
                     action = action[0]
                     ob_, r, done, _ = self.env.step(action)
+                    reward+=r
                     self.runs.add_next(state=ob, action=action, reward=r, next_state=ob_, done=done)
                     if render:
                         self.env.render()
+        reward/=num_ep
+        return reward
 
     def estimate_return(self, lr=0.001, batch_size=128, iterations=1024):
         self.runs.compute_rewards()
         data_collected = list(self.runs.state_target.items())
         data_loader = CriticLoader(data_collected=data_collected)
-        self.policy.fit_critic(data_loader=data_loader, lr=lr, batch_size=batch_size, iterations=iterations)
+        loss = self.policy.fit_critic(data_loader=data_loader, lr=lr, batch_size=batch_size, iterations=iterations)
+        return loss
 
     def improve_policy(self, lr=0.001, batch_size=128, iterations=1):
         with torch.no_grad():
@@ -71,5 +79,4 @@ class Looper:
 
 
 if __name__ == '__main__':
-    # TODO: Add logging
-    pass
+    looper = Looper()
