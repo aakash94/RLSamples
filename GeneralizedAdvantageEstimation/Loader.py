@@ -1,6 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 
+import numpy as np
+
 from Trajectory import Trajectory
 from UnitStep import UnitStep
 
@@ -32,7 +34,7 @@ class CriticLoader(Dataset):
             y = list(y)
 
         x = torch.Tensor(x).to(self.device).float()
-        y = torch.Tensor(y).to(self.device).float()
+        y = torch.Tensor(np.asarray(y)).to(self.device).flatten().float()
 
         return x, y
 
@@ -59,6 +61,7 @@ class StatesLoader(Dataset):
         state = step.state
         x = torch.Tensor(state).to(self.device)
         return x
+
 
 class ActorLoader(Dataset):
 
@@ -90,7 +93,7 @@ class ActorLoader(Dataset):
 
         state = torch.Tensor(state).to(self.device).float()
         action = torch.Tensor(action).to(self.device).float()
-        value = torch.Tensor(value).to(self.device).float()
+        value = torch.Tensor(np.asarray(value)).to(self.device).flatten().float()
 
         # state = Tensor[]
         # action = Tensor[]

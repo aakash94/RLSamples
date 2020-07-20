@@ -32,12 +32,12 @@ class Looper:
 
         for e in trange(epochs):
 
-            if e % show_every == 0:
+            if e % show_every == 0 and e>0 :
                 self.policy.demonstrate(ep_count=10)
 
-            reward = self.generate_samples()
+            reward = self.generate_samples(num_ep=10)
             self.plotter.plot_line('reward per episode', 'reward', 'avg reward when generating samples', e, reward)
-            loss = self.estimate_return()
+            loss = self.estimate_return(iterations=3)
             self.plotter.plot_line('loss for critic fit', 'loss', 'avg loss per batch', e, loss)
             self.improve_policy()
 
@@ -58,6 +58,7 @@ class Looper:
                     ob_, r, done, _ = self.env.step(action)
                     reward+=r
                     self.runs.add_next(state=ob, action=action, reward=r, next_state=ob_, done=done)
+                    ob = ob_
                     if render:
                         self.env.render()
         reward/=num_ep
@@ -72,7 +73,7 @@ class Looper:
 
     def improve_policy(self, lr=0.001, batch_size=128, iterations=1):
         with torch.no_grad():
-            self.runs.compute_advantage()
+            self.runs.compute_advantage(v=self.policy.critic)
         data_collected = list(self.runs.advantage_sa_mean.items())
         data_loader = ActorLoader(data_collected=data_collected)
         self.policy.improve_actor(data_loader=data_loader, lr=lr, batch_size=batch_size, iterations=iterations)
@@ -80,3 +81,6 @@ class Looper:
 
 if __name__ == '__main__':
     looper = Looper()
+    #looper.policy.demonstrate(ep_count=1)
+    looper.loop(epochs=3)
+    looper.policy.demonstrate(ep_count=10)

@@ -1,5 +1,5 @@
 import random
-
+import numpy as np
 
 class UnitStep:
 
@@ -10,10 +10,10 @@ class UnitStep:
                  next_state=None,
                  done=None,
                  rtg=None):
-        self.state = state
-        self.action = action
+        self.state = state.astype('float32')
+        self.action = action.astype('float32')
         self.reward = reward
-        self.next_state = next_state
+        self.next_state = next_state.astype('float32')
         self.done = done
         self.rtg = rtg
 

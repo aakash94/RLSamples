@@ -18,8 +18,17 @@ class Policy:
         state_size = np.prod(list(env.observation_space.shape))
         action_size = np.prod(list(env.action_space.shape))
 
-        self.actor = Actor(n_ip=state_size, n_op=action_size)  # .apply(self.weights_init)
-        self.critic = Critic(n_ip=state_size)  # .apply(self.weights_init)
+        # the max and min here are shorcut
+        # because all spaces have same range here
+        # ideally when clamping, different dimension should support different ranges
+        self.low_action =env.action_space.low.max()
+        self.high_action = env.action_space.high.min()
+
+        self.actor = Actor(n_ip=state_size, n_op=action_size)
+        self.critic = Critic(n_ip=state_size).apply(self.weights_init)
+
+        self.actor.apply(self.weights_init)
+        self.critic.apply(self.weights_init)
 
         if torch.cuda.is_available():
             self.use_gpu = True
@@ -28,7 +37,7 @@ class Policy:
             self.use_gpu = False
             self.device = torch.device("cpu")
 
-    def weights_init(m):
+    def weights_init(self, m):
         if hasattr(m, 'weight'):
             torch.nn.init.xavier_uniform_(m.weight)
 
@@ -67,6 +76,7 @@ class Policy:
         m = m.cpu().flatten().float()
         s = s.cpu().flatten().float()
         samples = torch.normal(mean=m, std=s)
+        samples = torch.clamp(samples, min=self.low_action, max=self.high_action)
         sampled_action = samples.reshape(-1, chnk).numpy()
         return sampled_action
 
@@ -109,6 +119,7 @@ class Policy:
                     action = action[0]
                     ob_, r, done, _ = env.step(action)
                     env.render()
+        env.close()
 
 
 if __name__ == '__main__':

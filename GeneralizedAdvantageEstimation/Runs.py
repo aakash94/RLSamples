@@ -5,7 +5,7 @@ from Trajectory import Trajectory
 from Loader import StatesLoader
 import torch.utils.data.dataloader as dataloader
 import numpy as np
-
+import torch
 
 class Runs:
 
@@ -60,11 +60,11 @@ class Runs:
                 # convert to tuple because they will be keys for dictionary
                 state = tuple(step.state)
                 action = tuple(step.action)
-                rtg = tuple(step.reward)
+                rtg = step.reward
                 self.state_reward[(state)].append(rtg)
                 self.reward_sa[(state, action)].append(rtg)
 
-            for key, value in self.reward_sa:
+            for key, value in self.reward_sa.items():
                 # key is state action pair
                 # value is list of rewards.
                 state = key[0]
@@ -83,6 +83,10 @@ class Runs:
         alpha = self.gamma * _lambda_
         for t in self.trajectories:
             trajectory = t.trajectory
+            if len(trajectory) == 0:
+                # nothing to do here
+                continue
+
             # trajectory = [ UnitStep, UnitStep, UnitStep, UnitStep, ]
             data_loader = StatesLoader(trajectory=trajectory)
             v_s = self.get_state_values(data_loader=data_loader, crtc=v, batch_size=128)
@@ -115,7 +119,7 @@ class Runs:
                     self.advantage_sa[(state, action)].append(d_t.sum())
                     d_t = d_t*alpha
 
-        for key, value in self.advantage_sa:
+        for key, value in self.advantage_sa.items():
             # key is state action pair
             # value is list of rewards.
             average_sa = sum(value) / len(value)
@@ -126,7 +130,7 @@ class Runs:
 
     def get_state_values(self, data_loader, crtc, batch_size=32):
         v_s = {}
-        loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=True)
+        loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=False)
         for states in loader:
             with torch.no_grad():
                 values = crtc(states)
