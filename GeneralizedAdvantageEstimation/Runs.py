@@ -7,6 +7,7 @@ import torch.utils.data.dataloader as dataloader
 import numpy as np
 import torch
 
+
 class Runs:
 
     def __init__(self, gamma=0.99):
@@ -117,16 +118,13 @@ class Runs:
                     self.advantage_sa[(state, action)].append(d_t[i])
                 else:
                     self.advantage_sa[(state, action)].append(d_t.sum())
-                    d_t = d_t*alpha
+                    d_t = d_t * alpha
 
         for key, value in self.advantage_sa.items():
             # key is state action pair
             # value is list of rewards.
             average_sa = sum(value) / len(value)
             self.advantage_sa_mean[key] = average_sa
-
-
-
 
     def get_state_values(self, data_loader, crtc, batch_size=32):
         v_s = {}

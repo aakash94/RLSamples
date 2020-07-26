@@ -13,13 +13,14 @@ class Actor(nn.Module):
 
         # Will sharing parameters here help? IDK.
 
-        self.m_fc1 = nn.Linear(n_ip, n_ip * 16)
-        self.m_fc2 = nn.Linear(n_ip * 16, n_ip * 16)
-        self.m_fc3 = nn.Linear(n_ip * 16, n_op)
+        self.m_fc1 = nn.Linear(n_ip, n_ip * 8)
+        self.m_fc2 = nn.Linear(n_ip * 8, n_ip * 8)
+        self.m_fc3 = nn.Linear(n_ip * 8, n_op)
 
-        self.s_fc1 = nn.Linear(n_ip, n_ip * 16)
-        self.s_fc2 = nn.Linear(n_ip * 16, n_ip * 16)
-        self.s_fc3 = nn.Linear(n_ip * 16, n_op)
+        # self.s_fc1 = nn.Linear(n_ip, n_ip * 8)
+        # self.s_fc2 = nn.Linear(n_ip * 8, n_ip * 8)
+        # self.s_fc3 = nn.Linear(n_ip * 8, n_op)
+        self.t_logstd = nn.Parameter(torch.randn((n_op)))
 
         if torch.cuda.is_available():
             self.use_gpu = True
@@ -42,10 +43,10 @@ class Actor(nn.Module):
         t_mean = torch.tanh(self.m_fc2(t_mean))
         t_mean = torch.tanh(self.m_fc3(t_mean))
 
-        t_std = torch.tanh(self.s_fc1(x))
-        t_std = torch.relu(self.s_fc2(t_std))
-        t_std = torch.relu(self.s_fc3(t_std))
-        t_std = torch.clamp(t_std, min=0.001)
+        # t_std = torch.tanh(self.s_fc1(x))
+        # t_std = torch.tanh(self.s_fc2(t_std))
+        # t_std = F.softplus(self.s_fc3(t_std))
+        t_std = self.t_logstd.exp()
 
         # t_mean=t_mean.to("cpu")
         # t_std = t_std.to("cpu")

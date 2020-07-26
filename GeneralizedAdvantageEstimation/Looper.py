@@ -35,6 +35,7 @@ class Looper:
              critic_lr=0.001,
              critic_batch=128,
              critic_iterations=64,
+             critic_max_loss=0.1,
              actor_lr=0.001,
              actor_batch=128,
              actor_iterations=1,
@@ -48,8 +49,12 @@ class Looper:
             reward = self.generate_samples(num_ep=sample_count)
             self.plotter.plot_line('reward per episode', 'reward', 'avg reward when generating samples', e, reward)
 
-            loss = self.estimate_return(lr=critic_lr, batch_size=critic_batch, iterations=critic_iterations)
+            loss, last_avg_loss = self.estimate_return(lr=critic_lr,
+                                                       batch_size=critic_batch,
+                                                       iterations=critic_iterations,
+                                                       critic_max_loss=critic_max_loss)
             self.plotter.plot_line('loss for critic fit', 'loss', 'avg loss per batch', e, loss)
+            self.plotter.plot_line('loss for critic fit', 'last_loss', 'avg loss per batch', e, last_avg_loss)
             self.improve_policy(lr=actor_lr, batch_size=actor_batch, iterations=actor_iterations, _lambda_=actor_lambda)
 
     def generate_samples(self, num_ep=1, render=False):
@@ -75,12 +80,16 @@ class Looper:
         reward /= num_ep
         return reward
 
-    def estimate_return(self, lr=0.001, batch_size=128, iterations=1024):
+    def estimate_return(self, lr=0.001, batch_size=128, iterations=1024, critic_max_loss=0.1, ):
         self.runs.compute_rewards()
         data_collected = list(self.runs.state_target.items())
         data_loader = CriticLoader(data_collected=data_collected)
-        loss = self.policy.fit_critic(data_loader=data_loader, lr=lr, batch_size=batch_size, iterations=iterations)
-        return loss
+        loss, last_avg_loss = self.policy.fit_critic(data_loader=data_loader,
+                                                     lr=lr,
+                                                     batch_size=batch_size,
+                                                     iterations=iterations,
+                                                     critic_max_loss=critic_max_loss)
+        return loss, last_avg_loss
 
     def improve_policy(self, lr=0.001, batch_size=128, iterations=1, _lambda_=0):
         with torch.no_grad():
@@ -91,18 +100,19 @@ class Looper:
 
 
 if __name__ == '__main__':
-    looper = Looper(gamma=0.99)
+    looper = Looper(env="LunarLanderContinuous-v2", gamma=0.99)
     # looper.policy.demonstrate(ep_count=1)
     looper.loop(epochs=1000,
-                show_every=50,
+                show_every=1000,
                 show_for=5,
                 sample_count=64,
-                critic_lr=0.0001,
+                critic_lr=0.001,
                 critic_batch=64,
-                critic_iterations=32,
+                critic_iterations=128,
+                critic_max_loss=1,
                 actor_lr=0.001,
                 actor_batch=64,
-                actor_iterations=4,
+                actor_iterations=1,
                 actor_lambda=0)
     looper.policy.save_policy(save_name="attempt1")
     looper.policy.demonstrate(ep_count=10)

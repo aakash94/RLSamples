@@ -21,7 +21,7 @@ class Policy:
         # the max and min here are shorcut
         # because all spaces have same range here
         # ideally when clamping, different dimension should support different ranges
-        self.low_action =env.action_space.low.max()
+        self.low_action = env.action_space.low.max()
         self.high_action = env.action_space.high.min()
 
         self.actor = Actor(n_ip=state_size, n_op=action_size)
@@ -40,14 +40,24 @@ class Policy:
     def weights_init(self, m):
         if hasattr(m, 'weight'):
             torch.nn.init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0)
 
-    def fit_critic(self, data_loader, lr=0.001, batch_size=128, iterations=1024):
+    def fit_critic(self,
+                   data_loader,
+                   lr=0.001,
+                   batch_size=128,
+                   iterations=1024,
+                   critic_max_loss=0.1):
         loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=True)
         total_loss = 0.0
+        last_avg_loss = 0.0
         optimizer = optim.Adam(self.critic.parameters(), lr=lr)
         # criterion = nn.MSELoss()
         criterion = nn.SmoothL1Loss()  # for controlled gradients
+        last_avg_loss = 10.0
+
         for i in range(iterations):
+        #while last_avg_loss > critic_max_loss:
             sum_loss = 0.0
             count = 0
             for x, y in loader:
@@ -63,10 +73,12 @@ class Policy:
                 loss.backward()
                 optimizer.step()
 
-            total_loss += (sum_loss / count)
+            last_avg_loss = (sum_loss / count)
+
+            total_loss += last_avg_loss
 
         average_loss = total_loss / iterations
-        return average_loss
+        return average_loss, last_avg_loss
 
     def sample_action(self, observations):
         # observations = [ [], [], [], [] ]
@@ -125,7 +137,7 @@ class Policy:
 if __name__ == '__main__':
     p = Policy()
     m = [100, 200, 300]
-    s = [1, 1, 1]
+    s = [0.3, 0.3, 0.9]
     a = [100, 200, 300]
     v = [1000, 100, 10]
     m = torch.tensor(m).float()
