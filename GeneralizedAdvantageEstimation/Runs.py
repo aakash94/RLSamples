@@ -61,7 +61,8 @@ class Runs:
                 # convert to tuple because they will be keys for dictionary
                 state = tuple(step.state)
                 action = tuple(step.action)
-                rtg = step.reward
+                #rtg = step.reward
+                rtg = step.rtg
                 self.state_reward[(state)].append(rtg)
                 self.reward_sa[(state, action)].append(rtg)
 
@@ -104,7 +105,7 @@ class Runs:
             if n < 0:
                 return
 
-            for i in range(n, 0, -1):
+            for i in range(n, -1, -1):
                 step = trajectory[i]
                 state = tuple(step.state)
                 action = tuple(step.action)

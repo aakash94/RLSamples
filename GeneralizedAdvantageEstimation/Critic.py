@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 
 class Critic(nn.Module):
@@ -10,9 +9,10 @@ class Critic(nn.Module):
 
     def __init__(self, n_ip, drop_p=0.0, move_to_gpu=True):
         super(Critic, self).__init__()
-        self.fc1 = nn.Linear(n_ip, n_ip * 16)
-        self.fc2 = nn.Linear(n_ip * 16, n_ip * 16)
-        self.fc3 = nn.Linear(n_ip * 16, 1)
+        self.fc10 = nn.Linear(n_ip, n_ip * 16)
+        self.fc20 = nn.Linear(n_ip * 16, n_ip * 32)
+        #self.fc30 = nn.Linear(n_ip * 8, n_ip * 8)
+        self.fc40 = nn.Linear(n_ip * 32, 1)
         self.drop_prob = drop_p
 
         if self.drop_prob > 0:
@@ -31,23 +31,24 @@ class Critic(nn.Module):
     def forward(self, x):
 
         x = x.to(self.device)
-        x = torch.tanh(self.fc1(x))
+        x = torch.tanh(self.fc10(x))
 
         if self.drop_prob > 0:
             x = self.dropout(x)
 
-        x = torch.tanh(self.fc2(x))
+        x = torch.tanh(self.fc20(x))
 
         if self.drop_prob > 0:
             x = self.dropout(x)
 
-        t_value = self.fc3(x)
+        # x = torch.tanh(self.fc30(x))
+        #
+        # if self.drop_prob > 0:
+        #     x = self.dropout(x)
+
+        t_value = self.fc40(x)
 
         return t_value
-
-    def weights_init(m):
-        if hasattr(m, 'weight'):
-            torch.nn.init.xavier_uniform_(m.weight)
 
     def save_model(self, save_name):
         self.to_cpu()

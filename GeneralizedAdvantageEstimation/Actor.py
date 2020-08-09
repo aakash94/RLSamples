@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.functional as F
 
 
 class Actor(nn.Module):
@@ -8,19 +7,22 @@ class Actor(nn.Module):
     # For continuous actions
     # returning mean and standard deviation
 
-    def __init__(self, n_ip, n_op, move_to_gpu=True):
+    def __init__(self, n_ip, n_op, min_std_start=0.5, move_to_gpu=True, std_min=1e-3, std_max=2, action_scale=2):
         super(Actor, self).__init__()
 
-        # Will sharing parameters here help? IDK.
+        self.std_min = std_min
+        self.std_max = std_max
+        self.action_scale = action_scale
 
-        self.m_fc1 = nn.Linear(n_ip, n_ip * 8)
-        self.m_fc2 = nn.Linear(n_ip * 8, n_ip * 8)
-        self.m_fc3 = nn.Linear(n_ip * 8, n_op)
+        self.fc10 = nn.Linear(n_ip, n_ip * 16)
+        self.fc20 = nn.Linear(n_ip * 16, n_ip * 32)
+        self.fc_mu = nn.Linear(n_ip * 32, n_op)
+        self.fc_std = nn.Linear(n_ip * 32, n_op)
 
-        # self.s_fc1 = nn.Linear(n_ip, n_ip * 8)
-        # self.s_fc2 = nn.Linear(n_ip * 8, n_ip * 8)
-        # self.s_fc3 = nn.Linear(n_ip * 8, n_op)
-        self.t_logstd = nn.Parameter(torch.randn((n_op)))
+        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
+        self.softplus = nn.Softplus()
+
 
         if torch.cuda.is_available():
             self.use_gpu = True
@@ -34,23 +36,38 @@ class Actor(nn.Module):
 
     def forward(self, x):
 
-        # x = x.to(self.device)
+        x = self.relu(self.fc10(x))
+        x = self.relu(self.fc20(x))
+        mu = self.action_scale * self.tanh(self.fc_mu(x))
+        std = self.softplus(self.fc_std(x))
 
-        # using tanh here for mean
-        # most env take value in that range
+        #std = self.clip_std_val(std=std, min=self.std_min, max=self.std_max)
+        std = std.clamp(min=self.std_min, max=self.std_max)
 
-        t_mean = torch.tanh(self.m_fc1(x))
-        t_mean = torch.tanh(self.m_fc2(t_mean))
-        t_mean = torch.tanh(self.m_fc3(t_mean))
+        return (mu, std)
 
-        # t_std = torch.tanh(self.s_fc1(x))
-        # t_std = torch.tanh(self.s_fc2(t_std))
-        # t_std = F.softplus(self.s_fc3(t_std))
-        t_std = self.t_logstd.exp()
+    def clip_log_val(self, min=-5, max=0):
+        if hasattr(self.t_logstd, 'data'):
+            w = self.t_logstd.data
+            w = w.clamp(max=max)
+            self.t_logstd.data = w
+        else:
+            print("WTF")
 
-        # t_mean=t_mean.to("cpu")
-        # t_std = t_std.to("cpu")
-        return (t_mean, t_std)
+    def clip_std_val(self, std, min=1e-3,  max=2):
+        if hasattr(self.std, 'data'):
+            w = std.data
+            w = w.clamp(min=min, max=max)
+            std.data = w
+            return  std
+        else:
+            print("WTF")
+
+    def get_std_values(self):
+        # v = self.t_logstd.exp()
+        v = self.t_std
+        v = v.detach().cpu().numpy()
+        return v
 
     def save_model(self, save_name):
         self.to_cpu()
@@ -70,3 +87,9 @@ class Actor(nn.Module):
 
     def to_cpu(self):
         self.cpu()
+
+
+if __name__ == '__main__':
+    a = nn.Parameter(torch.randn((2)) + 2)  # +2
+
+    print(a)

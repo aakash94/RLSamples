@@ -33,8 +33,8 @@ class Looper:
              show_for=10,
              sample_count=64,
              critic_lr=0.001,
-             critic_batch=128,
-             critic_iterations=64,
+             critic_batch=64,
+             critic_iterations=1024,
              critic_max_loss=0.1,
              actor_lr=0.001,
              actor_batch=128,
@@ -46,7 +46,13 @@ class Looper:
             if e % show_every == 0 and e > 0:
                 self.policy.demonstrate(ep_count=show_for)
 
+            #temp_std = self.policy.actor.get_std_values()
+
+            #self.plotter.plot_line('actor std', 'dimension 0', 'standard deviation of action dimension', e, temp_std[0])
+            #self.plotter.plot_line('actor std', 'dimension 1', 'standard deviation of action dimension', e, temp_std[1])
+
             reward = self.generate_samples(num_ep=sample_count)
+
             self.plotter.plot_line('reward per episode', 'reward', 'avg reward when generating samples', e, reward)
 
             loss, last_avg_loss = self.estimate_return(lr=critic_lr,
@@ -55,6 +61,7 @@ class Looper:
                                                        critic_max_loss=critic_max_loss)
             self.plotter.plot_line('loss for critic fit', 'loss', 'avg loss per batch', e, loss)
             self.plotter.plot_line('loss for critic fit', 'last_loss', 'avg loss per batch', e, last_avg_loss)
+
             self.improve_policy(lr=actor_lr, batch_size=actor_batch, iterations=actor_iterations, _lambda_=actor_lambda)
 
     def generate_samples(self, num_ep=1, render=False):
@@ -100,19 +107,19 @@ class Looper:
 
 
 if __name__ == '__main__':
-    looper = Looper(env="LunarLanderContinuous-v2", gamma=0.99)
-    # looper.policy.demonstrate(ep_count=1)
+    looper = Looper(env="Pendulum-v0", gamma=0.99)
+    #looper.policy.demonstrate(ep_count=10)
     looper.loop(epochs=1000,
                 show_every=1000,
                 show_for=5,
-                sample_count=64,
+                sample_count=32,
                 critic_lr=0.001,
                 critic_batch=64,
-                critic_iterations=128,
-                critic_max_loss=1,
+                critic_iterations=64,
+                critic_max_loss=0.1,
                 actor_lr=0.001,
                 actor_batch=64,
                 actor_iterations=1,
                 actor_lambda=0)
-    looper.policy.save_policy(save_name="attempt1")
+    looper.policy.save_policy(save_name="PV0-a1")
     looper.policy.demonstrate(ep_count=10)

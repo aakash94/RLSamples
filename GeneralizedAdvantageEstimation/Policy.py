@@ -47,17 +47,25 @@ class Policy:
                    lr=0.001,
                    batch_size=128,
                    iterations=1024,
-                   critic_max_loss=0.1):
+                   critic_max_loss=0.1,
+                   count_no_improvement=10,
+                   min_improvement=0.0001):
         loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=True)
         total_loss = 0.0
         last_avg_loss = 0.0
         optimizer = optim.Adam(self.critic.parameters(), lr=lr)
         # criterion = nn.MSELoss()
         criterion = nn.SmoothL1Loss()  # for controlled gradients
-        last_avg_loss = 10.0
+        last_avg_loss = 10.0 # some high value for now
+
+        insig_improvement_count = 0
+        improvement = 0.0
 
         for i in range(iterations):
-        #while last_avg_loss > critic_max_loss:
+
+            if last_avg_loss < critic_max_loss or insig_improvement_count>count_no_improvement:
+                break
+
             sum_loss = 0.0
             count = 0
             for x, y in loader:
@@ -73,9 +81,20 @@ class Policy:
                 loss.backward()
                 optimizer.step()
 
-            last_avg_loss = (sum_loss / count)
+            avg_loss = (sum_loss / count)
 
+
+            improvement = last_avg_loss - avg_loss
+
+            if improvement <= min_improvement:
+                insig_improvement_count += 1
+            else:
+                insig_improvement_count = 0
+
+            last_avg_loss = avg_loss
             total_loss += last_avg_loss
+
+
 
         average_loss = total_loss / iterations
         return average_loss, last_avg_loss
