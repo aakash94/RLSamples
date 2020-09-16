@@ -84,16 +84,24 @@ class Policy:
         return log_prob
 
     def improve_critic(self, data_loader, lr=0.001, batch_size=128, iterations=1):
+        total_loss = 0
+        total_len = 0
+
         optimizer = optim.Adam(self.critic.parameters(), lr=lr)
         loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=True)
         for e in range(iterations):
             optimizer.zero_grad()
             for states, targets in loader:
+                total_len += len(targets)
                 # the targets here should be normalized
                 prediction = self.critic(states)
                 loss =  nn.functional.mse_loss(prediction, targets)
                 loss.backward()
                 optimizer.step()
+                total_loss += loss.item()
+
+        avg_loss = total_loss/total_len
+        return avg_loss
 
 
     def improve_actor(self, data_loader, lr=0.001, batch_size=128, iterations=1):

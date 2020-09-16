@@ -65,5 +65,5 @@ if __name__ == '__main__':
     a = torch.tensor(a)
     a = a.float()
 
-    print(a)
+    print(len(a))
 
