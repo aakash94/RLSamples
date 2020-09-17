@@ -13,8 +13,7 @@ class Critic(nn.Module):
         self.mlp.append(activation)
         self.mlp.append(nn.Linear(size, size))
         self.mlp.append(activation)
-        self.mlp.append(nn.Linear(size, 1)) # state value
-
+        self.mlp.append(nn.Linear(size, 1))  # state value
 
         if torch.cuda.is_available():
             self.use_gpu = True

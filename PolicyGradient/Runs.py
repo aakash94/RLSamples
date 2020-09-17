@@ -6,13 +6,13 @@ from Loader import CriticLoader
 from Critic import Critic
 import torch.utils.data.dataloader as dataloader
 
+
 class Runs:
 
     def __init__(self, gamma=0.99):
         self.gamma = gamma
         self.ep_header = ['state', 'action', 'reward', 'next_state', 'done', 'rtg', ]
         self.vs_header = ['state', 'rtg']
-        #self.qsa_header = ['sa', 'rtg']
         self.reset()
 
     def reset(self):
@@ -22,7 +22,6 @@ class Runs:
         # for whatever trajectory is added first here
         self.episode = Episode(gamma=self.gamma)
         self.all_runs = pd.DataFrame(columns=self.ep_header)
-        #self.qsa = pd.DataFrame(columns=self.qsa_header)
         self.vs = pd.DataFrame(columns=self.vs_header)
 
     def add_step(self, state, action, reward, next_state, done):
@@ -38,9 +37,6 @@ class Runs:
     def compute_rewards(self):
         self.all_runs = pd.concat(self.trajectories)
         self.vs = self.all_runs.filter(self.vs_header, axis=1).copy()
-
-        #self.qsa['sa'] = list(zip(merged_df['state'], merged_df['action']))
-        #self.qsa['rtg'] = merged_df['rtg'].values
 
     def get_normalized_rtg(self):
         df_norm = self.vs.copy()
@@ -77,59 +73,16 @@ class Runs:
                 advantage = t_targets - t_baselines
                 advantage = advantage.to("cpu").numpy()
 
+                # normalize advantage
+                advantage = (advantage - np.mean(advantage)) / (np.std(advantage) + 1e-8)
+
                 for index, state in enumerate(states):
                     adv = advantage[index]
                     s = tuple(state)
                     self.baseline[s] = adv
 
-
                 start_row = end_row
-
-            '''
-            data_loader = CriticLoader(dframe=self.vs)
-            loader = dataloader.DataLoader(data_loader, batch_size=batch_size, shuffle=True)
-            for states, targets in loader:
-                baseline = critic(states)
-                baseline = baseline.flatten()
-                baseline = baseline*std_val + mean_val
-                advantage = targets - baseline
-                states = states.to("cpu")
-                advantage = advantage.to("cpu")
-
-                # add state and adbantage to dictionary
-                for index, state in enumerate(states):
-                    adv = advantage[index]
-                    s = tuple(state.numpy())
-                    self.baseline[s] = adv
-            '''
 
 
 if __name__ == '__main__':
-    vs_header = ['state', 'rtg']
-    df_norm = pd.DataFrame(columns=vs_header)
-    row_list = []
-    state = np.array([1, 2, 3])
-    rtg = 99
-    values = [tuple(state), rtg]
-    d = dict(zip(vs_header, values))
-    row_list.append(d)
-
-    state = np.array([4, 5, 6])
-    rtg = 98
-    values = [tuple(state), rtg]
-    d = dict(zip(vs_header, values))
-    row_list.append(d)
-    state = np.array([7, 8, 9])
-    rtg = 97
-    values = [tuple(state), rtg]
-    d = dict(zip(vs_header, values))
-    row_list.append(d)
-    df_norm = pd.DataFrame(row_list)
-    print(df_norm)
-
-    m = df_norm['rtg'].mean()
-    s = df_norm['rtg'].std()
-    print(m)
-    print(s)
-    df_norm['rtg'] = (df_norm['rtg'] - df_norm['rtg'].mean()) / df_norm['rtg'].std()
-    print(df_norm)
+    pass

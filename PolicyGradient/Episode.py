@@ -60,10 +60,4 @@ class Episode:
 
 
 if __name__ == '__main__':
-    import torch
-    a = [(2.3,2.1),(3.3,3.3),(5.3,5.0),(0.4,4.4)]
-    a = torch.tensor(a)
-    a = a.float()
-
-    print(len(a))
-
+    pass

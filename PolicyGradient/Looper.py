@@ -36,11 +36,12 @@ class Looper:
         for e in trange(epochs):
 
             if e % show_every == 0 and e > 0:
-                #self.policy.demonstrate(ep_count=show_for)
+                # self.policy.demonstrate(ep_count=show_for)
                 pass
 
             reward = self.generate_samples(num_ep=sample_count)
             self.plotter.plot_line('reward per episode', 'reward', 'avg reward when generating samples', e, reward)
+
             loss = self.estimate_return(lr=lr, batch_size=batch_size)
             self.plotter.plot_line('loss per batch', 'loss', 'avg loss when training critic', e, loss)
             self.improve_policy(lr=lr, batch_size=batch_size)
@@ -83,22 +84,4 @@ class Looper:
 
 
 if __name__ == '__main__':
-    looper = Looper(env="Pendulum-v0", gamma=0.99)
-    #looper.policy.demonstrate(ep_count=10)
-    looper.loop(epochs=100,
-                show_every=10000,
-                show_for=5,
-                sample_count=4096,
-                lr=5e-3,
-                batch_size=4096)
-
-    # looper.loop(epochs=2,
-    #             show_every=10000,
-    #             show_for=5,
-    #             sample_count=4,
-    #             lr=5e-3,
-    #             batch_size=512)
-
-
-    looper.policy.save_policy(save_name="PV0-a1")
-    looper.policy.demonstrate(ep_count=10)
+    pass

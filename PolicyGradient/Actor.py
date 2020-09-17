@@ -20,7 +20,6 @@ class Actor(nn.Module):
 
         self.logstd = nn.Parameter(torch.zeros(n_op))
 
-
         if torch.cuda.is_available():
             self.use_gpu = True
             self.device = torch.device("cuda")
@@ -66,6 +65,4 @@ class Actor(nn.Module):
 
 
 if __name__ == '__main__':
-    a = nn.Parameter(torch.randn(2) + 2)  # +2
-
-    print(a)
+    pass

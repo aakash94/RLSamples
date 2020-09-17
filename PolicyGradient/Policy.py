@@ -7,7 +7,6 @@ import torch.utils.data.dataloader as dataloader
 
 from Actor import Actor
 from Critic import Critic
-from Loader import StatesLoader
 
 
 class Policy:
@@ -63,17 +62,17 @@ class Policy:
             self.device = torch.device("cpu")
 
     def sample_action(self, observations):
-        # observations = [ [], [], [], [] ]
-        ob = torch.Tensor(observations).to(self.device)
-        m, s = self.actor(ob)
-        chnk = len(m[0])  # the size of action space here
-        m = m.cpu().flatten().float()
-        s = s.cpu().flatten().float()
-        samples = torch.normal(mean=m, std=s)
-        samples = torch.clamp(samples, min=self.low_action, max=self.high_action)
-        # sampled_action = samples.reshape(-1, chnk).numpy()
-        sampled_action = samples.reshape(-1, chnk).detach().numpy()
-        return sampled_action
+        with torch.no_grad():
+            ob = torch.Tensor(observations).to(self.device)
+            m, s = self.actor(ob)
+            chnk = len(m[0])  # the size of action space here
+            m = m.cpu().flatten().float()
+            s = s.cpu().flatten().float()
+            samples = torch.normal(mean=m, std=s)
+            samples = torch.clamp(samples, min=self.low_action, max=self.high_action)
+            # sampled_action = samples.reshape(-1, chnk).numpy()
+            sampled_action = samples.reshape(-1, chnk).detach().numpy()
+            return sampled_action
 
     def get_log_prob(self, mean, standard_deviation, actions):
 
@@ -95,14 +94,13 @@ class Policy:
                 total_len += len(targets)
                 # the targets here should be normalized
                 prediction = self.critic(states)
-                loss =  nn.functional.mse_loss(prediction, targets)
+                loss = nn.functional.mse_loss(prediction, targets)
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
 
-        avg_loss = total_loss/total_len
+        avg_loss = total_loss / total_len
         return avg_loss
-
 
     def improve_actor(self, data_loader, lr=0.001, batch_size=128, iterations=1):
         optimizer = optim.Adam(self.actor.parameters(), lr=lr)
@@ -117,15 +115,5 @@ class Policy:
                 optimizer.step()
 
 
-    def get_advantage_values(self):
-        pass
-
 if __name__ == '__main__':
-
-    m = [[100, 200, 300], [0.3, 0.3, 0.9],[100, 200, 300],[1000, 100, 10]]
-    t1 = torch.tensor(m)
-    t2 = torch.tensor([1,2,3,4]).numpy()
-    print(t1)
-    print(t2)
-    for index, row in enumerate(t1):
-        print(index, tuple(row.numpy()), t2[index])
+    pass
